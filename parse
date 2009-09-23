@@ -1,0 +1,82 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Data::Dumper;
+my %l_ops=(
+  '|' => "||\n",
+  '&' => "&&\n"
+);
+my @tests=(
+"&(|(term1)(term2))(!(&(term1)(term2)))",
+"(&(!(employeeType=*NHU*))(!(pwdAccountLockedTime=000001010000Z))(|(&(objectClass=sambaSamAccount)(!(|(sambaAcctFlags=[UD])(sambaAcctFlags=[DU])(sambaAcctFlags=[DUX]))))(!(objectClass=sambaSamAccount))))"
+);
+
+foreach my $test(@tests){
+  print "TEST : $test\n";
+#  print Dumper($test)."\n";
+  print gen_string($test);
+  print "\n\n\n\n\n\n\n";
+#  print Dumper(split_by_parens($test))
+}
+
+sub split_by_parens {
+  my ($string)=@_;
+  my @ary=split(//,$string);
+  my @ret;
+  if($ary[0] ne '('){
+    warn "split_by_parens doesn't start with ( \n\t$string";
+    @ret=($string);
+    return @ret; 
+  }
+  my $buff='';
+  my $nest=0;
+  foreach my  $c(@ary){
+    $buff.=$c;
+    if($c eq '('){
+      $nest++;
+    }
+    if($c eq ')'){
+      $nest--;
+      if($nest==0){
+        push(@ret,$buff);
+        $buff='';
+      }
+    }
+  }
+  return @ret;
+}
+  
+  
+sub gen_string{
+  my ($string)=@_;
+#print STDERR "STRING = $string\n";
+  if($string=~/^([&|!]?)\((.*)\)$/){
+    unless($1){
+#      print "RECURSE: \$1 = $1\n"; 
+      return  "(".gen_string($2).")";
+    }
+    my $args='('.$2.')';
+    my $cmd=$1;
+    my @toks=split_by_parens($args);
+    if($cmd eq '!'){
+      return "not ".gen_string($args)
+    }else{
+      my @rec;
+      foreach my $t(@toks){
+        push(@rec, gen_string($t));
+      }
+#      print Dumper($cmd);
+#      print Dumper($l_ops{$cmd});
+#      print Dumper(@toks);
+#      print Dumper(@rec);
+#    print "Operator = $1\n";
+#    print "String = $2\n";
+      
+      return join($l_ops{$cmd},@rec);
+    }
+  }else{
+    return "\n$string\n";
+    print "WTF NO match $string\n";
+  }
+
+}
