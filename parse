@@ -14,7 +14,7 @@ my @tests=(
 foreach my $test(@tests){
   print "TEST : $test\n";
 #  print Dumper($test)."\n";
-  print gen_string($test);
+  print Dumper(gen_string($test));
   print "\n\n\n\n\n\n\n";
 #  print Dumper(split_by_parens($test))
 }
@@ -53,30 +53,27 @@ sub gen_string{
   if($string=~/^([&|!]?)\((.*)\)$/){
     unless($1){
 #      print "RECURSE: \$1 = $1\n"; 
-      return  "(".gen_string($2).")";
+      return  ['&&',gen_string($2)];
     }
     my $args='('.$2.')';
     my $cmd=$1;
     my @toks=split_by_parens($args);
     if($cmd eq '!'){
-      return "not ".gen_string($args)
+      return ['not',gen_string($args)]
     }else{
       my @rec;
       foreach my $t(@toks){
         push(@rec, gen_string($t));
       }
-#      print Dumper($cmd);
-#      print Dumper($l_ops{$cmd});
-#      print Dumper(@toks);
-#      print Dumper(@rec);
-#    print "Operator = $1\n";
-#    print "String = $2\n";
-      
-      return join($l_ops{$cmd},@rec);
+      return [$l_ops{$cmd},@rec];
     }
   }else{
-    return "\n$string\n";
-    print "WTF NO match $string\n";
+    if($string=~/^(.*)(=|=~)(.*)$/){
+    return [$2,$1,$3];
+    return "$string";
+    }
+    warn "WTF NO match $string\n";
+    return "$string";
   }
 
 }
